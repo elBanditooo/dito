@@ -1,1 +1,1102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <!-- Grundlegende Metadaten -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!-- Leaflet CSS für die Karte -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <!-- Google Material Icons für Symbole -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+    <!-- Inline CSS für die Anwendung -->
+    <style>
+        /* Material Icons Styling */
+        .material-icons {
+            font-family: 'Material Icons';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px; /* Preferred icon size */
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+
+            /* Optimierung für verschiedene Browser */
+            -webkit-font-smoothing: antialiased; /* WebKit (Safari, Chrome) */
+            text-rendering: optimizeLegibility;
+            -moz-osx-font-smoothing: grayscale; /* Firefox */
+            font-feature-settings: 'liga'; /* Internet Explorer */
+        }
+
+        /* Pop-up Styling (runde Ecken, kein Spitze) */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important; 
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .leaflet-popup-tip {
+            display: none;
+        }
+
+        .leaflet-popup-content {
+            border-radius: 12px !important;
+            padding: 10px;
+        }
+
+        /* Legende Styling */
+        .leaflet-control-legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .leaflet-control-legend .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .leaflet-control-legend .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border-radius: 4px;
+        }
+
+        /* Kartenbereich Styling */
+        #map {
+            height: 500px;
+            margin-top: 20px;
+        }
+
+        /* Tabellen Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        /* Scrollbare Tabelle */
+        #data-table tbody {
+            display: block;
+            height: 200px;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        #data-table thead, #data-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        /* Kopfzeilen fixieren */
+        #data-table thead {
+            position: sticky;
+            top: 0;
+            background-color: #f1f1f1;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* Verstecke bestimmte Spalten */
+        #data-table th:nth-child(3),
+        #data-table th:nth-child(4), 
+        #data-table th:nth-child(6),
+        #data-table th:nth-child(7),
+        #data-table th:nth-child(8),
+        #data-table th:nth-child(9),
+        #data-table th:nth-child(10) { 
+            display: none;
+        }
+
+        #data-table td:nth-child(3),
+        #data-table td:nth-child(4),
+        #data-table td:nth-child(6),
+        #data-table td:nth-child(7),
+        #data-table td:nth-child(8),
+        #data-table td:nth-child(9),
+        #data-table td:nth-child(10) {
+            display: none;
+        }
+      
+        /* Container für beide Filter */
+.filters-container {
+    display: flex;
+    gap: 20px; /* Abstand zwischen den beiden Filter-Gruppen */
+    margin-bottom: 20px; /* Abstand nach unten für den gesamten Filterbereich */
+}
+
+/* Jede Filter-Gruppe wird separat behandelt */
+.filter-group {
+    flex: 1; /* Beide Filtergruppen nehmen gleich viel Platz ein */
+}
+
+/* Optional: Stelle sicher, dass Buttons und Filter gut ausgerichtet sind */
+button {
+    display: block; /* Button auf einer neuen Zeile */
+    margin-top: 5px;
+}
+
+    </style>
+</head>
+<body>
+  
+<h3><label for="searchName">Nach Namen Suchen:</label></h3>
+<form>
+    <input type="text" id="searchName" placeholder="Restaurant" />
+</form>
+
+<h3>Filter</h3>
+  
+<div class="filters-container">
+  
+  <div class="filter-group"> 
+    <label for="kitchenFilter">Kitchen:</label>
+    <!-- Button zum Anzeigen aller Filter -->
+    <button id="showMoreKitchens">Show more</button>
+    <div id="kitchenFilter">
+        <br />
+        <!-- Die Küchenarten werden dynamisch durch JavaScript hinzugefügt -->
+        <div id="additionalKitchens" style="display: none;">
+            <!-- Weitere Küchenarten werden hier hinzugefügt -->
+        </div>
+    </div>
+  </div>
+  
+  <div class="filter-group">
+    <label for="cityFilter">City:</label>
+    <!-- Button zum Anzeigen aller Filter -->
+    <button id="showMoreCities">Show more</button>
+    <div id="cityFilter">
+        <br />
+        <!-- Die Städte werden dynamisch durch JavaScript hinzugefügt -->
+        <div id="additionalCities" style="display: none;">
+            <!-- Weitere Städte werden hier hinzugefügt -->
+        </div>
+    </div>
+  </div>
+  
+</div>
+  
+<table align="" id="data-table" border="1" cellspacing="0" cellpadding="3" width="100%" height="100%" class="mceEditable">
+<thead>
+<tr>
+<th>
+<h3>Name</h3>
+</th>
+<th>
+<h3>Kitchen</h3>
+</th>
+<th>
+<h3>Description</h3>
+</th>
+<th>
+<h3>Country</h3>
+</th>
+<th>
+<h3>City</h3>
+</th>
+<th>
+<h3>Postcode</h3>
+</th>
+<th>
+<h3>Street</h3>
+</th>
+<th>
+<h3>Housenumber</h3>
+</th>
+<th>
+<h3>Latitude</h3>
+</th>
+<th>
+<h3>Longitude</h3>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Aloha Poke</td>
+<td>Asian</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80799</td>
+<td>T&uuml;rkenstra&szlig;e</td>
+<td>80</td>
+<td>48.1515488</td>
+<td>11.5769056</td>
+</tr>
+<tr>
+<td>Arthur Grimm</td>
+<td>Bakery</td>
+<td>&nbsp;</td>
+<td>&Ouml;sterreich</td>
+<td>Wien</td>
+<td>1010</td>
+<td>Kurrentgasse</td>
+<td>10</td>
+<td>48.21095657348633</td>
+<td>16.36972427368164</td>
+</tr>
+<tr>
+<td>ausnahmsweise</td>
+<td>Cafe</td>
+<td>&nbsp;</td>
+<td>&Ouml;sterreich</td>
+<td>Wien</td>
+<td>1060</td>
+<td>Hofm&uuml;hlgasse</td>
+<td>18/5</td>
+<td>48.1942329</td>
+<td>16.3514703</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/pb985d00ce886eedf/" title="Bep Bu - Vietnamese Streetfood">Bep Bu</a></td>
+<td>Asian</td>
+<td>Vietnamese Streetfood</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80799</td>
+<td>Barer Stra&szlig;e</td>
+<td>48</td>
+<td>48.1496552</td>
+<td>11.5726171</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p55d3a7b0df83d8e6/" title="Beryl's Fish &amp; Chips &amp; Veggies">Beryl's Fish &amp; Chips &amp; Veggies</a></td>
+<td>Fast Food</td>
+<td>Der besten (veganen) Fisch in der Stadt</td>
+<td>Niederlande</td>
+<td>Deventer</td>
+<td>7411 KV</td>
+<td>Grote Kerkhof</td>
+<td>32</td>
+<td>52.251792907714844</td>
+<td>6.154019355773926</td>
+</tr>
+<tr>
+<td>Caf&eacute; Josefina</td>
+<td>Cafe</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80798</td>
+<td>Augustenstra&szlig;e</td>
+<td>113</td>
+<td>48.1541832</td>
+<td>11.5660259</td>
+</tr>
+<tr>
+<td>Caf&eacute; Kollowitz</td>
+<td>Cafe</td>
+<td>Kuchen</td>
+<td>Deutschland</td>
+<td>Leipzig</td>
+<td>04109</td>
+<td>K&auml;the-Kollwitz-Stra&szlig;e</td>
+<td>83</td>
+<td>51.335776</td>
+<td>12.3566754</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p55b326e2fc2333f1/" title="Caf&eacute; Marle">Caf&eacute; Marle</a></td>
+<td>Cafe</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>Bamberg</td>
+<td>96049</td>
+<td>Obere Sandstra&szlig;e</td>
+<td>6</td>
+<td>49.8918124</td>
+<td>10.8842719</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p3c8c055eb0027829/" title="Caf&eacute; Zimt und Trallala">Caf&eacute; Zimt und Trallala</a></td>
+<td>Cafe</td>
+<td>Fr&uuml;hst&uuml;ck</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80469</td>
+<td>Ehrengutstra&szlig;e</td>
+<td>9</td>
+<td>48.1213132</td>
+<td>11.5599935</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p5d387c211ff3fcc6/" title="Craft - Coffe&amp;Pastry">Craft Coffe&amp;Pastry</a></td>
+<td>Bakery</td>
+<td>Unbelievable Croissants</td>
+<td>Niederlande</td>
+<td>Amsterdam</td>
+<td>1073 VS</td>
+<td>Gerard Doustraat</td>
+<td>103A</td>
+<td>52.356143</td>
+<td>4.8934825</td>
+</tr>
+<tr>
+<td>Da Gigi</td>
+<td>Italian</td>
+<td>Pizza</td>
+<td>Italien</td>
+<td>Malcesine VR</td>
+<td>37018</td>
+<td>Via Gardesana</td>
+<td>214</td>
+<td>45.7589992</td>
+<td>10.808541</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/pa6ed4afb9a9846f7/" title="das METTA">das METTA</a></td>
+<td>Bakery</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80799</td>
+<td>Barer Stra&szlig;e</td>
+<td>48</td>
+<td>48.14957046508789</td>
+<td>11.572335243225098</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p89f23e64616c3aaa/" title="Drunken Cow - Bar and Grill">Drunken Cow - Bar &amp; Grill</a></td>
+<td>Fast Food</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80333</td>
+<td>Gabelsbergerstra&szlig;e</td>
+<td>58</td>
+<td>48.1497362</td>
+<td>11.5608019</td>
+</tr>
+<tr>
+<td>El Aquanauta</td>
+<td>Latin</td>
+<td>Tacos</td>
+<td>Spanien</td>
+<td>Palma de Mallorca</td>
+<td>07013</td>
+<td>Avinguda de l'Argentina</td>
+<td>27</td>
+<td>39.5710158</td>
+<td>2.639608</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p2cd645814abb0e9e/" title="Hallo Arepa - Food Truck">Hallo Arepa</a></td>
+<td>Latin</td>
+<td>Venezuelan Street Food</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>81373</td>
+<td>Pfeuferstra&szlig;e</td>
+<td>44</td>
+<td>48.12186050415039</td>
+<td>11.541092872619629</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/pf8350bb72a2eb161/" title="Neues Restaurant - Heilig-Geist-Stiftschenke und Stiftskeller">Heilig-Geist-Stiftsschenke und Stiftskeller</a></td>
+<td>German</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>Passau</td>
+<td>94032</td>
+<td>Heiliggeistgasse</td>
+<td>4</td>
+<td>48.57322311401367</td>
+<td>13.46019172668457</td>
+</tr>
+<tr>
+<td>Isabella Glutenfreie Patisserie</td>
+<td>Bakery</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80331</td>
+<td>Hackenstra&szlig;e</td>
+<td>4</td>
+<td>48.1361478</td>
+<td>11.5702843</td>
+</tr>
+<tr>
+<td>Kapunka</td>
+<td>Asian</td>
+<td>Thai</td>
+<td>Frankreich</td>
+<td>Paris</td>
+<td>75002</td>
+<td>Rue Saint-Sauveur</td>
+<td>51</td>
+<td>48.8662054</td>
+<td>2.3477094</td>
+</tr>
+<tr>
+<td>La Costa in Bra</td>
+<td>Italian</td>
+<td>Pizza and Pasta</td>
+<td>Italien</td>
+<td>Verona VR</td>
+<td>37121</td>
+<td>P.za Br&agrave;</td>
+<td>2</td>
+<td>45.4396053</td>
+<td>10.9932447</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/pa0dc9aa8993eb77c/" title="La Fantasia">La Fantasia</a></td>
+<td>Italian</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>81675</td>
+<td>Seeriederstra&szlig;e</td>
+<td>5</td>
+<td>48.1350827</td>
+<td>11.6025733</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p41f20656cb853821/" title="Le Vespe - Trattoria &amp; Pizzeria">Le Vespe</a></td>
+<td>Italian</td>
+<td>Trattoria Pizzeria</td>
+<td>Deutschland</td>
+<td>Neufahrn bei Freising</td>
+<td>85375</td>
+<td>Marktplatz</td>
+<td>21</td>
+<td>48.3165997</td>
+<td>11.65976</td>
+</tr>
+<tr>
+<td>MUN MUN</td>
+<td>Asian</td>
+<td>Thai Cooking</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80802</td>
+<td>M&uuml;nchner Freiheit</td>
+<td>7</td>
+<td>48.1629046</td>
+<td>11.5867082</td>
+</tr>
+<tr>
+<td>Oh happy Caf&eacute;</td>
+<td>Cafe</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>81377</td>
+<td>Waldfriedhofstra&szlig;e</td>
+<td>46</td>
+<td>48.1130773</td>
+<td>11.5102045</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p6c9fc20ad7afaf31/" title="Palast der Winde">Palast der Winde</a></td>
+<td>Indian</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80469</td>
+<td>Hans-Sachs-Stra&szlig;e</td>
+<td>8</td>
+<td>48.1297492980957</td>
+<td>11.569883346557617</td>
+</tr>
+<tr>
+<td>Palmtreeclub</td>
+<td>Diverse</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80333</td>
+<td>Augustenstra&szlig;e</td>
+<td>43</td>
+<td>48.1484766</td>
+<td>11.5622729</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/pca0405ccadcba70a/" title="Pancake am Tor">Pancake am Tor</a></td>
+<td>Cafe</td>
+<td>Pancakes</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80331</td>
+<td>Herzog-Wilhelm-Stra&szlig;e</td>
+<td>30</td>
+<td>48.1343485</td>
+<td>11.5670804</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p878daf386b6cbc61/" title="Panokuko">Panokuko</a></td>
+<td>Bakery</td>
+<td>Backstube, Naturkost &amp; Caf&eacute;</td>
+<td>Deutschland</td>
+<td>Leipzig</td>
+<td>04229</td>
+<td>Erich-Zeigner-Allee</td>
+<td>64a</td>
+<td>51.323965</td>
+<td>12.3361699</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/pd9e9e60715910912/" title="Neues Restaurant - Gastst&auml;tte Pelikan">Pelikan</a></td>
+<td>Diverse</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>Bamberg</td>
+<td>96049</td>
+<td>Untere Sandstra&szlig;e</td>
+<td>45</td>
+<td>49.8941327</td>
+<td>10.8803648</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p91629e5e1b507027/" title="Pizzeria Focacceria Quattrocento">Pizzeria Focacceria Quattrocento</a></td>
+<td>Italian</td>
+<td>Pizza</td>
+<td>Italien</td>
+<td>Marzana VR</td>
+<td>37142</td>
+<td>Via Valpantena</td>
+<td>94f</td>
+<td>45.4993505</td>
+<td>11.0177486</td>
+</tr>
+<tr>
+<td>Pizzeria Scarabocchio</td>
+<td>Italian</td>
+<td>&nbsp;</td>
+<td>&Ouml;sterreich</td>
+<td>Wien</td>
+<td>1080</td>
+<td>Florianigasse</td>
+<td>3</td>
+<td>48.2121585</td>
+<td>16.352831</td>
+</tr>
+<tr>
+<td>Pizzesco</td>
+<td>Italian</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>81669</td>
+<td>Rosenheimer Stra&szlig;e</td>
+<td>12</td>
+<td>48.1313375</td>
+<td>11.5895465</td>
+</tr>
+<tr>
+<td>Primo Taqueria</td>
+<td>Latin</td>
+<td>Tacos</td>
+<td>Spanien</td>
+<td>Palma de Mallorca</td>
+<td>07012</td>
+<td>C. de la F&agrave;brica</td>
+<td>29</td>
+<td>39.5723433</td>
+<td>2.638426</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p14916e8e439a864e/" title="Ritterstuben">Ritterstuben</a></td>
+<td>German</td>
+<td>Schnitzel</td>
+<td>Deutschland</td>
+<td>F&uuml;ssen</td>
+<td>87629</td>
+<td>Ritterstra&szlig;e</td>
+<td>4</td>
+<td>47.5678114</td>
+<td>10.6986458</td>
+</tr>
+<tr>
+<td>Rivareno Gelateria</td>
+<td>Icecream</td>
+<td>&nbsp;</td>
+<td>Spanien</td>
+<td>Palma de Mallorca</td>
+<td>07012</td>
+<td>Pla&ccedil;a de la Llotja</td>
+<td>1</td>
+<td>39.56844</td>
+<td>2.64494</td>
+</tr>
+<tr>
+<td>Rivareno Gelateria</td>
+<td>Icecream</td>
+<td>&nbsp;</td>
+<td>Spanien</td>
+<td>Palma de Mallorca</td>
+<td>07001</td>
+<td>Pla&ccedil;a de la Seu</td>
+<td>1</td>
+<td>39.56824</td>
+<td>2.64784</td>
+</tr>
+<tr>
+<td>Rose&amp;Vanilla</td>
+<td>Cafe</td>
+<td>&nbsp;</td>
+<td>Niederlande</td>
+<td>Utrecht</td>
+<td>3513 AA</td>
+<td>Amsterdamsestaatweg</td>
+<td>11</td>
+<td>52.095954</td>
+<td>5.109011</td>
+</tr>
+<tr>
+<td>Salino</td>
+<td>Italian</td>
+<td>Holzofenpizza</td>
+<td>Deutschland</td>
+<td>Bamberg</td>
+<td>96047</td>
+<td>Schillerplatz</td>
+<td>11</td>
+<td>49.8897624</td>
+<td>10.8915398</td>
+</tr>
+<tr>
+<td>Sapori Mediterranei</td>
+<td>Italian</td>
+<td>&nbsp;</td>
+<td>Deutschland</td>
+<td>Unterschlei&szlig;heim</td>
+<td>85716</td>
+<td>Bezirksstra&szlig;e</td>
+<td>5a</td>
+<td>48.2838583</td>
+<td>11.5803172</td>
+</tr>
+<tr>
+<td>shizoo</td>
+<td>Asian</td>
+<td>Sushi</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80804</td>
+<td>Isoldenstra&szlig;e</td>
+<td>35</td>
+<td>48.1752834</td>
+<td>11.5815673</td>
+</tr>
+<tr>
+<td>Simply Raw Bakery and Bistro</td>
+<td>Bakery</td>
+<td>&nbsp;</td>
+<td>&Ouml;sterreich</td>
+<td>Wien</td>
+<td>1010</td>
+<td>Drahtgasse</td>
+<td>2</td>
+<td>48.2114977</td>
+<td>16.3689411</td>
+</tr>
+<tr>
+<td>The Food Club</td>
+<td>Diverse</td>
+<td>&nbsp;</td>
+<td>Niederlande</td>
+<td>Utrecht</td>
+<td>3551 CW</td>
+<td>Amsterdamsestaatweg</td>
+<td>378</td>
+<td>52.103166</td>
+<td>5.095250</td>
+</tr>
+<tr>
+<td><a href="/app/s355ebb5274e987a9/p96b4e615fc948e6f/" title="Wirtshaus am Bavariapark">Wirtshaus am Bavariapark</a></td>
+<td>German</td>
+<td>Schweinebraten, Schnitzel und andere Gerichte</td>
+<td>Deutschland</td>
+<td>M&uuml;nchen</td>
+<td>80339</td>
+<td>Theresienh&ouml;he</td>
+<td>15</td>
+<td>48.1319667</td>
+<td>11.5445321</td>
+</tr>
+</tbody>
+</table>
+  
+<style>
+<![CDATA[
+
+    /* CSS für den Standort-Button innerhalb der Karte */
+    .leaflet-bar button {
+        background-color: white;
+        border: 2px solid #0078A8;
+        color: #0078A8;
+        font-size: 14px;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .leaflet-bar button:hover {
+        background-color: #0078A8;
+        color: white;
+    }
+]]>
+</style>
+
+<div id="map">
+</div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  let bounds = L.latLngBounds();
+
+  /* <![CDATA[ */
+  document.addEventListener("DOMContentLoaded", () => {
+    // Tabellen- und Filter-Elemente abrufen
+    const table = document.querySelector("#data-table tbody");
+    const searchInput = document.querySelector("#searchName");
+    const kitchenFilterContainer = document.querySelector("#kitchenFilter");
+    const cityFilterContainer = document.querySelector("#cityFilter");
+
+    // Farbzuordnung für Küchenarten
+    const colorMapping = {
+      "german": "blue",
+      "italian": "green",
+      "asian": "red",
+      "latin": "purple",
+      "icecream": "pink",
+      "cafe": "orange",
+      "bakery": "brown",
+      "fast food": "#91f0f0",
+      "diverse": "#bd70f3",
+      "default": "gray"
+    };
+
+    // Karte initialisieren
+    const map = L.map('map').setView([51.1657, 10.4515], 6);
+
+    // OpenStreetMap-Tiles hinzufügen
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Geolokalisierungs-Button erstellen und hinzufügen
+    const locateControl = L.control({ position: 'topleft' });
+    locateControl.onAdd = function () {
+      const button = L.DomUtil.create('button', 'leaflet-bar leaflet-control');
+      button.innerHTML = 'Standort';
+
+      button.onclick = function () {
+        if (!navigator.geolocation) {
+          alert("Geolocation wird von Ihrem Browser nicht unterstützt.");
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            // Marker mit Symbol hinzufügen
+            const customLocationIcon = L.divIcon({
+              className: 'material-location-icon',
+              html: '<i class="material-icons">my_location</i>',
+              iconSize: [30, 30],
+              iconAnchor: [15, 15]
+            });
+
+            const marker = L.marker([lat, lng], { icon: customLocationIcon }).addTo(map);
+            bounds.extend([lat, lng]);
+            markerLayer.addLayer(marker);
+            map.fitBounds(bounds);
+          },
+          () => {
+            alert("Standort konnte nicht ermittelt werden.");
+          }
+        );
+      };
+      return button;
+    };
+    locateControl.addTo(map);
+
+    // LayerGroup zur Verwaltung der Marker erstellen
+    let markerLayer = L.layerGroup().addTo(map);
+
+    // Funktion zur Aktualisierung der Marker
+    function updateMarkers() {
+      markerLayer.clearLayers();
+      const bounds = L.latLngBounds();
+
+      table.querySelectorAll("tr").forEach((row) => {
+        if (row.style.display !== "none") {
+          const lat = parseFloat(row.cells[8].textContent);
+          const lng = parseFloat(row.cells[9].textContent);
+          const name = row.cells[0].innerHTML;
+          const description = row.cells[2].textContent;
+          const kitchen = row.cells[1].textContent.trim().toLowerCase();
+          const color = colorMapping[kitchen] || colorMapping["default"];
+
+          // Marker mit benutzerdefiniertem Symbol erstellen
+          const markerHtmlStyles = `
+            background-color: ${color};
+            width: 2rem;
+            height: 2rem;
+            display: block;
+            left: -1rem;
+            top: -1rem;
+            position: relative;
+            border-radius: 1.5rem 1.5rem 0;
+            transform: rotate(45deg);
+            border: 1px solid #FFFFFF`;
+
+          const customRestaurantIcon = L.divIcon({
+            className: "my-custom-pin",
+            iconAnchor: [0, 24],
+            popupAnchor: [0, -26],
+            html: `<span style="${markerHtmlStyles}" />`
+          });
+
+          const marker = L.marker([lat, lng], { icon: customRestaurantIcon }).bindPopup(`
+            <div style="font-size: 14px; line-height: 1.4;">
+              <h3 style="margin: 0; font-size: 18px; font-weight: normal;">${name}</h3>
+              <p style="margin: 5px 0 0;">${description}</p>
+            </div>
+          `);
+
+          markerLayer.addLayer(marker);
+          bounds.extend([lat, lng]);
+
+          row.addEventListener("click", () => {
+            map.setView([lat, lng], 14);
+            marker.openPopup();
+          });
+        }
+      });
+
+      if (bounds.isValid()) {
+        bounds.pad(0.1); // Vergrößert die Bounds um 10%
+        map.fitBounds(bounds);
+      }
+    }
+
+    // Legende erstellen
+    const legend = L.control({ position: 'bottomleft' });
+    legend.onAdd = function () {
+      const div = L.DomUtil.create('div', 'leaflet-control-legend');
+      for (let kitchen in colorMapping) {
+        div.innerHTML += `
+          <div class="legend-item">
+            <div class="legend-color" style="background-color: ${colorMapping[kitchen]}"></div>
+            ${kitchen.charAt(0).toUpperCase() + kitchen.slice(1)}
+          </div>
+        `;
+      }
+      return div;
+    };
+    legend.addTo(map);
+
+    // Tabelle alphabetisch nach Namen sortieren
+    function sortTableByName() {
+      const rows = Array.from(table.rows);
+      rows.sort((rowA, rowB) => {
+        const nameA = rowA.cells[0].textContent.toLowerCase();
+        const nameB = rowB.cells[0].textContent.toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+      rows.forEach(row => table.appendChild(row));
+    }
+    sortTableByName();
+
+    // Suche nach Namen implementieren
+    searchInput.addEventListener("input", () => {
+      const searchTerm = searchInput.value.toLowerCase();
+      table.querySelectorAll("tr").forEach(row => {
+        const name = row.cells[0].textContent.toLowerCase();
+        row.style.display = name.includes(searchTerm) ? "" : "none";
+      });
+      updateMarkers();
+    });
+
+    // Filter für Küchen und Städte auffüllen
+    function populateFilters() {
+      const kitchens = new Set();
+      const cities = new Set();
+
+      table.querySelectorAll("tr").forEach(row => {
+        const kitchen = row.children[1].textContent.trim();
+        const city = row.children[4].textContent.trim();
+
+        if (kitchen) kitchens.add(kitchen);
+        if (city) cities.add(city);
+      });
+
+      // Küchen-Checkboxen hinzufügen
+      let kitchenCount = 0;
+      kitchens.forEach(kitchen => {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = kitchen;
+        checkbox.id = `kitchen-${kitchen}`;
+        checkbox.checked = true; // Standardmäßig alle ausgewählt
+        const label = document.createElement("label");
+        label.setAttribute("for", checkbox.id);
+        label.textContent = kitchen;
+
+        if (kitchenCount < 3) {
+          kitchenFilterContainer.appendChild(checkbox);
+          kitchenFilterContainer.appendChild(label);
+          kitchenFilterContainer.appendChild(document.createElement("br"));
+        } else {
+          // Zusätzliche Küchen in einen versteckten Bereich einfügen
+          const additionalKitchens = document.getElementById('additionalKitchens');
+          additionalKitchens.appendChild(checkbox);
+          additionalKitchens.appendChild(label);
+          additionalKitchens.appendChild(document.createElement("br"));
+        }
+
+        kitchenCount++;
+      });
+
+      // Städte-Checkboxen hinzufügen
+      let cityCount = 0;
+      cities.forEach(city => {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = city;
+        checkbox.id = `city-${city}`;
+        checkbox.checked = true; // Standardmäßig alle ausgewählt
+        const label = document.createElement("label");
+        label.setAttribute("for", checkbox.id);
+        label.textContent = city;
+
+        if (cityCount < 3) {
+          cityFilterContainer.appendChild(checkbox);
+          cityFilterContainer.appendChild(label);
+          cityFilterContainer.appendChild(document.createElement("br"));
+        } else {
+          // Zusätzliche Städte in einen versteckten Bereich einfügen
+          const additionalCities = document.getElementById('additionalCities');
+          additionalCities.appendChild(checkbox);
+          additionalCities.appendChild(label);
+          additionalCities.appendChild(document.createElement("br"));
+        }
+
+        cityCount++;
+      });
+
+      // "All"-Checkbox für Kitchen und City
+      addAllCheckbox(kitchenFilterContainer, 'Kitchen', kitchens);
+      addAllCheckbox(cityFilterContainer, 'City', cities);
+    }
+
+    // Funktion zum Hinzufügen der "All"-Checkbox
+    function addAllCheckbox(container, labelText, items) {
+      const allCheckbox = document.createElement("input");
+      allCheckbox.type = "checkbox";
+      allCheckbox.id = `${labelText}-All`;
+      allCheckbox.checked = true; // Standardmäßig alle aktiviert
+      const allLabel = document.createElement("label");
+      allLabel.setAttribute("for", allCheckbox.id);
+      allLabel.textContent = "All";
+
+      container.prepend(allLabel);
+      container.prepend(allCheckbox);
+      container.appendChild(document.createElement("br"));
+
+      // "All"-Checkbox Interaktionslogik
+      allCheckbox.addEventListener('change', () => {
+        const checkboxes = container.querySelectorAll("input[type=checkbox]:not(#" + allCheckbox.id + ")");
+        checkboxes.forEach(checkbox => checkbox.checked = allCheckbox.checked);
+        filterTable(); // Wendet den Filter an
+      });
+
+      // Einzelne Checkboxen überwachen
+      const checkboxes = container.querySelectorAll("input[type=checkbox]:not(#" + allCheckbox.id + ")");
+      checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+          // Wenn eine einzelne Checkbox deaktiviert wird, "All" abwählen
+          if (!checkbox.checked) {
+            allCheckbox.checked = false;
+          }
+          // Wenn alle Checkboxen aktiviert sind, "All" aktivieren
+          else if (Array.from(checkboxes).every(c => c.checked)) {
+            allCheckbox.checked = true;
+          }
+          filterTable(); // Wendet den Filter an
+        });
+      });
+    }
+
+    // Tabelle basierend auf den ausgewählten Filtern aktualisieren
+    function filterTable() {
+      const selectedKitchens = Array.from(kitchenFilterContainer.querySelectorAll("input[type=checkbox]:checked"))
+        .map(checkbox => checkbox.value);
+      const selectedCities = Array.from(cityFilterContainer.querySelectorAll("input[type=checkbox]:checked"))
+        .map(checkbox => checkbox.value);
+
+      table.querySelectorAll("tr").forEach(row => {
+        const kitchen = row.children[1].textContent.trim();
+        const city = row.children[4].textContent.trim();
+
+        const matchesKitchen = selectedKitchens.length === 0 || selectedKitchens.includes(kitchen);
+        const matchesCity = selectedCities.length === 0 || selectedCities.includes(city);
+
+        row.style.display = matchesKitchen && matchesCity ? "" : "none";
+      });
+
+      updateMarkers(); // Aktualisiert die Marker basierend auf den Filtern
+    }
+
+    kitchenFilterContainer.addEventListener("change", filterTable);
+    cityFilterContainer.addEventListener("change", filterTable);
+
+    // Button zum Anzeigen aller Küchen
+    const showMoreKitchensButton = document.getElementById('showMoreKitchens');
+    showMoreKitchensButton.addEventListener('click', () => {
+      toggleFilters('Kitchens');
+    });
+
+    // Button zum Anzeigen aller Städte
+    const showMoreCitiesButton = document.getElementById('showMoreCities');
+    showMoreCitiesButton.addEventListener('click', () => {
+      toggleFilters('Cities');
+    });
+
+    // Funktion zum Umschalten zwischen "Show More" und "Show Less"
+    function toggleFilters(type) {
+      const additionalContainer = document.getElementById(`additional${type}`);
+      const showMoreButton = document.getElementById(`showMore${type}`);
+
+      if (additionalContainer.style.display === 'none') {
+        additionalContainer.style.display = 'block';
+        showMoreButton.textContent = 'Show Less';
+      } else {
+        additionalContainer.style.display = 'none';
+        showMoreButton.textContent = 'Show More';
+      }
+    }
+
+    populateFilters(); // Filter befüllen
+    filterTable(); // Filter anwenden
+    updateMarkers(); // Marker aktualisieren
+  });
+  /* ]]> */
+</script>
+
+</body>
+</html>
